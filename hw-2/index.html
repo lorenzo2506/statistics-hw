@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HMWK 2 – From Wallet Seed to Ethereum Address</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<h1>HMWK 2 – From Wallet Seed to Ethereum Address</h1>
+<p class="mut"><i>Hashing, key derivation and cryptographic primitives</i></p>
+
+<h2>1. The pipeline</h2>
+<p class="pipe">Mnemonic → (BIP-39) → Seed → (BIP-32 / BIP-44) → Private key → (secp256k1) → Public key → (Keccak-256) → Ethereum address → (EIP-55) → Checksummed address</p>
+<p>Each arrow is a different kind of operation, with a different purpose.</p>
+
+<h2>2. Role of each standard or primitive</h2>
+<p><b>BIP-39 (mnemonic and seed).</b> Encodes random entropy (128–256 bits) as a list of 12–24 words from a fixed 2048-word list; the last bits are a checksum (first bits of SHA-256 of the entropy). The words are turned into a 512-bit seed with PBKDF2-HMAC-SHA512 (2048 iterations, optional passphrase). Purpose: human-friendly backup of the wallet secret.</p>
+<p><b>BIP-32 (HD key derivation).</b> From one seed it derives a whole tree of keys: HMAC-SHA512 with the key "Bitcoin seed" gives a master private key and a chain code; child keys are derived deterministically from parent key, chain code and an index. Purpose: one backup, unlimited keys.</p>
+<p><b>BIP-44 (derivation paths).</b> Fixes a standard layout of the tree: m / 44' / coin_type' / account' / change / address_index. For Ethereum, coin_type = 60, so the first account is m/44'/60'/0'/0/0. Purpose: interoperability, so the same mnemonic gives the same addresses in MetaMask, Rabby, Ledger, etc.</p>
+<p><b>secp256k1 (public-key cryptography).</b> The elliptic curve y² = x³ + 7 over a 256-bit prime field with a standard base point G. Public key Q = k·G, where k is the private key. Going from k to Q is easy (double-and-add); going back is the Elliptic Curve Discrete Logarithm Problem, believed infeasible. It is also the basis of ECDSA signatures used to sign transactions. This is exactly what HMWK 1 shows on a toy curve.</p>
+<p><b>Keccak-256 (hash).</b> The uncompressed public key (64 bytes, x‖y, without the 0x04 prefix) is hashed with Keccak-256; the Ethereum address is the last 20 bytes (40 hex characters) of the digest.</p>
+<p><b>EIP-55 (checksum).</b> Take the lowercase hex address, hash its ASCII text with Keccak-256, and capitalise each letter whose corresponding hash nibble is ≥ 8. The result is a mixed-case address that detects typing mistakes (probability of an undetected random error about 1/2<sup>15</sup> per address) while remaining fully backward-compatible.</p>
+
+<h2>3. Key concepts to distinguish</h2>
+<ul>
+<li><b>Key generation vs key derivation.</b> Generation creates fresh secret randomness (the entropy behind the mnemonic). Derivation is deterministic: the same input always gives the same keys (BIP-32/44, and PBKDF2 for the seed). No new randomness is added after the first step.</li>
+<li><b>Public-key cryptography.</b> Asymmetric key pair with a one-way relation (k → Q) enabling signatures without sharing secrets. Security rests on a hard mathematical problem (ECDLP).</li>
+<li><b>Hashing.</b> A fixed-size fingerprint of arbitrary data, deterministic, one-way, collision-resistant, with avalanche effect. Not reversible and not encryption.</li>
+<li><b>Checksums.</b> Small redundant data to detect accidental errors (BIP-39 last bits, EIP-55 capitalisation). They are not secret and not designed against attackers.</li>
+<li><b>Encoding.</b> Reversible change of representation with no secrecy (hex, the word list, mixed-case letters). Anyone can decode it.</li>
+</ul>
+
+<h2>4. Statistical properties</h2>
+<ul>
+<li><b>Entropy and uniformity.</b> Security depends on the initial entropy being uniformly random: 256 bits give 2<sup>256</sup> possible secrets.</li>
+<li><b>Hashes and KDFs (SHA-256, PBKDF2, HMAC-SHA512, Keccak-256).</b> Designed so that outputs look uniform and each input bit flip changes about 50% of output bits (avalanche). Similar inputs give unrelated outputs.</li>
+<li><b>secp256k1.</b> Outputs look statistically uniform, but there is no avalanche: (k+1)·G = k·G + G, and k·G and (n−k)·G share the same x. As we saw in HMWK 1, uniformity-like behaviour is not what protects it; ECDLP hardness is.</li>
+<li><b>EIP-55.</b> The capitalisation pattern behaves like random bits derived from a hash, which is why a single wrong character is detected with probability ≈ 1 − 2<sup>−15</sup> on average.</li>
+</ul>
+
+<h2>5. Chronological context</h2>
+<ul>
+<li><b>1977 – RSA:</b> first widely used public-key cryptosystem.</li>
+<li><b>2001 – SHA-2 (incl. SHA-512):</b> standardised by NIST; used in BIP-39/BIP-32 (PBKDF2, HMAC-SHA512).</li>
+<li><b>2012 – BIP-32:</b> hierarchical deterministic wallets.</li>
+<li><b>2013 – BIP-39:</b> mnemonic code.</li>
+<li><b>2014 – BIP-44:</b> multi-account derivation paths.</li>
+<li><b>2015 – SHA-3:</b> standardised by NIST, based on Keccak. Ethereum launched in 2015 with the original Keccak submission.</li>
+<li><b>2016 – EIP-55:</b> mixed-case checksum addresses.</li>
+</ul>
+<p>The wallet standards therefore come from the Bitcoin world (2012–2014) and were adopted by Ethereum; the choice of secp256k1 was inherited from Bitcoin.</p>
+
+<h2>6. SHA-2/SHA-512 vs Keccak/SHA-3</h2>
+<p>SHA-2 uses the Merkle–Damgård construction with a compression function; SHA-3/Keccak uses a completely different design, the sponge construction (absorb and squeeze on a permutation state). They are both cryptographic hash families but are structurally unrelated, and SHA-3 was chosen by NIST as a backup with a different design.</p>
+<p>Ethereum's "Keccak-256" is the original Keccak as it was before standardisation. NIST's SHA3-256 changed the padding/domain-separation byte (0x06 instead of Keccak's 0x01), so the two functions give <b>different outputs for the same input</b>. Ethereum uses the pre-standard version, so an address computed with SHA3-256 would be wrong.</p>
+
+<h2>7. Why several different techniques?</h2>
+<p>No single algorithm can do everything, because each task needs different properties:</p>
+<ul>
+<li><b>BIP-39 / BIP-32 / BIP-44 → key management and derivation:</b> backup, many keys from one secret, compatibility across wallets.</li>
+<li><b>secp256k1 → public/private key relationship and signatures:</b> lets anyone verify a transaction without learning the secret.</li>
+<li><b>Keccak-256 → hashing:</b> compresses the public key to a short, uniform-looking 20-byte identifier and hides the public key until the first spend.</li>
+<li><b>EIP-55 → checksum / error detection:</b> protects users from typos without changing the address format.</li>
+</ul>
+<p>Separation also improves security and flexibility: a weakness in one component does not automatically break the others, and components can be replaced independently (for example, a different hash or curve).</p>
+
+</main>
+</body>
+</html>
