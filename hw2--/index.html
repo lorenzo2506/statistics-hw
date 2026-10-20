@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HMWK 3 – Toy ECC encryption, Caesar cipher and attacks</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<h1>HMWK 3 – Toy ECC encryption, Caesar cipher and their attacks</h1>
+<p class="mut">Educational toy code. Elliptic curve: real <b>secp256k1</b> (y² = x³ + 7 over a 256-bit prime), but the private key is restricted to 1…65535 so that attacks are feasible in the browser. Note: the tiny curve mod 17 of HMWK 1 has a group of order 9, too small to encrypt anything, so here we keep the same curve equation and use the real secp256k1 parameters.</p>
+
+<h2>1. Toy ECC encryption (EC ElGamal)</h2>
+<div class="card">
+<b>Algorithm.</b>
+<ol>
+<li><b>Keys.</b> Private key d (secret integer, here 1…65535). Public key Q = d·G (a point). G, the curve and Q are public.</li>
+<li><b>Encoding.</b> Each character code m (0…255) becomes the point M = m·G (computed from a small table). This is a simple toy encoding, not a standard one.</li>
+<li><b>Encryption.</b> For each character pick a fresh random number r (the ephemeral key). Send the pair C₁ = r·G and C₂ = M + r·Q. The term r·Q acts as a one-time mask.</li>
+<li><b>Decryption.</b> Compute d·C₁ = d·r·G = r·Q (the same mask, because d·Q-type products commute), then M = C₂ − d·C₁, then look up m in the table.</li>
+</ol>
+<b>Role of the keys.</b> Anyone can encrypt with the public key Q. Only the owner of d can remove the mask r·Q, since from C₁ = r·G and Q = d·G one would have to solve the discrete logarithm problem.
+</div>
+<div class="card">
+<div class="row">Message: <input id="msg" value="HELLO ECC" size="22"> Private key d (1–65535): <input id="d" type="number" min="1" max="65535" value="4242" style="width:90px">
+<button id="enc">Encrypt</button><button id="dec">Decrypt</button><button id="demoA">Same letter 8 times</button></div>
+<div id="eccInfo" class="mut" style="word-break:break-all"></div>
+<div class="scroll"><table id="eccTbl"></table></div>
+<div id="eccOut"></div>
+</div>
+
+<h2>2. Caesar cipher</h2>
+<div class="card">
+<div class="row">Message: <input id="cmsg" value="HELLO ECC" size="22"> Key (shift 0–25): <input id="ck" type="number" min="0" max="25" value="3" style="width:70px"><button id="cgo">Encrypt / Decrypt</button></div>
+<div id="cOut"></div>
+<p class="mut">Encryption: c = (m + k) mod 26 for each letter; decryption: m = (c − k) mod 26. Non-letters are kept unchanged.</p>
+</div>
+
+<h2>3. Comparison</h2>
+<div class="scroll"><table>
+<tr><th></th><th>Caesar</th><th>Toy EC ElGamal</th></tr>
+<tr><td>Type</td><td>Symmetric, one shared key k</td><td>Asymmetric: public Q, private d</td></tr>
+<tr><td>Encryption</td><td>Shift each letter by k</td><td>(r·G, m·G + r·Q) with fresh random r</td></tr>
+<tr><td>Decryption</td><td>Shift back by k</td><td>C₂ − d·C₁, then lookup of m</td></tr>
+<tr><td>Key space</td><td>26 keys (≈ 4.7 bits)</td><td>Toy: 65535 (16 bits). Real secp256k1: ≈ 2²⁵⁶</td></tr>
+<tr><td>Ciphertext size</td><td>Same as plaintext</td><td>Two curve points per character (very large expansion)</td></tr>
+<tr><td>Deterministic?</td><td>Yes: same letter → same letter</td><td>No: randomised by r, same letter → different ciphertexts</td></tr>
+<tr><td>Statistics</td><td>Letter frequencies and n-grams of the language are preserved (only relabelled)</td><td>Coordinates look uniform; no letter-frequency or n-gram structure visible (see "Same letter 8 times")</td></tr>
+<tr><td>Security rests on</td><td>Secrecy of a tiny key</td><td>Hardness of ECDLP (if d is large)</td></tr>
+</table></div>
+
+<h2>4. Statistical cryptanalysis of the Caesar cipher</h2>
+<p>Idea: a Caesar shift moves every letter in the same way, so the ciphertext frequency table is the language table rotated by k. We try all 26 shifts and score each candidate plaintext with three methods: <b>(a)</b> chi-square distance from the English letter frequencies, <b>(b)</b> bigram (2-letter) log-likelihood trained on the corpus below, <b>(c)</b> exhaustive search counting common English words.</p>
+<div class="card">
+Language: <select id="lang"><option value="en">English</option><option value="it">Italian</option></select><br>Training corpus (the text from which bigram statistics are learned; you can paste another text):
+<textarea id="corpus" rows="7"></textarea>
+<div class="row">Ciphertext: <input id="cipher" size="60"><button id="an">Analyse</button></div>
+<div id="anOut"></div>
+<svg id="freq" viewBox="0 0 520 130"></svg>
+<div class="mut">Bars: ciphertext letter frequencies. Outline: reference letter frequencies of the selected language (unshifted).</div>
+</div>
+<div class="card">
+<b>Effectiveness by ciphertext length.</b> Each trial takes a random piece of a different text (not used for training), encrypts it with a random key and tries to recover the key.
+<div class="row"><button id="test">Run test (400 trials per length)</button></div>
+<div class="scroll"><table id="testTbl"></table></div>
+<div id="testNote" class="mut"></div>
+</div>
+
+<h2>5. Statistical comparison: Caesar vs ECC ciphertext</h2>
+<div class="card">
+The same plaintext (the first 150 letters of the test text of the selected language) is encrypted with Caesar (key from section 2) and with the toy ECC scheme (public key from section 1). To apply the same letter-frequency tools, each ECC ciphertext is reduced to one letter A–Z by taking the x-coordinate of C₂ modulo 26. Then we run the Caesar attack (try all 26 shifts, compare with the language frequencies) on both ciphertexts.
+<div class="row"><button id="cmp">Run comparison (a few seconds)</button></div>
+<div id="cmpOut"></div>
+<p class="mut">Caesar ciphertext letter frequencies (bars) vs language reference (outline):</p>
+<svg id="freqC" viewBox="0 0 520 130"></svg>
+<p class="mut">ECC ciphertext letters (C₂.x mod 26):</p>
+<svg id="freqE" viewBox="0 0 520 130"></svg>
+</div>
+
+<h2>6. Attack on the toy ECC key space</h2>
+<div class="card">
+Target: the public key Q = d·G shown above (d from the input field). The attacker knows Q, G and that d is in 1…65535.
+<div class="row"><button id="bf">Brute force (G, 2G, 3G, …)</button><button id="bsgs">Baby-step giant-step</button></div>
+<div id="atkOut"></div>
+</div>
+
+<h2>7. Discussion</h2>
+<div class="card">
+<p><b>Statistical result.</b> In section 5 the plaintext has an index of coincidence of about 0.065 (English) or 0.075 (Italian) and a χ² far from uniform. The Caesar ciphertext keeps exactly the same index of coincidence (the letters are only relabelled), and the frequency attack singles out one shift whose χ² is far below the other 25, which is the key. The ECC ciphertext has an index of coincidence close to the uniform value 1/26 ≈ 0.038 and a χ² compatible with a uniform distribution; the 26 shifts all get similar scores and the "best" one decrypts to gibberish. Note that the reduction mod 26 is only a device to feed the same tool; a real attacker has no meaningful notion of shift for ECC. This shows the failure of this attack, it does not prove security: security rests on ECDLP.</p>
+<p><b>Caesar attack vs ECC attack.</b> Against Caesar we use <i>statistics of the plaintext language</i>: the ciphertext leaks the letter frequencies, so even without trying all keys the key can be guessed, and the longer the text the more reliable the guess (see the table in section 4: very short texts are ambiguous, a few dozen letters are almost always enough). Against the toy ECC scheme the ciphertext leaks no letter statistics at all, because every character uses a fresh random mask. The attack is instead <i>algebraic / exhaustive</i>: only the small key space is the weakness. We compute multiples of G until we hit Q (brute force, up to 65535 steps) or use baby-step giant-step, which needs only about 2·√65535 ≈ 512 group operations by trading memory for time. Once d is known, all messages encrypted to Q can be decrypted.</p>
+<p><b>Why this fails against a proper ECC scheme.</b> With a uniformly random 256-bit private key the space has ≈ 2²⁵⁶ keys. Brute force would need ~2²⁵⁶ steps; the best generic algorithms (baby-step giant-step, Pollard rho) still need about √(2²⁵⁶) = 2¹²⁸ operations, which is beyond any feasible computation. No statistical structure of the message helps, since ciphertexts are randomised.</p>
+<p><b>Weaknesses from the restricted key space.</b> Few possible keys → exhaustive search and BSGS (cost ≈ √N). Also small r: if the ephemeral number were also drawn from a small range, an attacker could recover r from C₁ = r·G and compute M = C₂ − r·Q <i>without</i> the private key.</p>
+<p><b>Weaknesses from the toy design.</b> (1) Encoding m as m·G and a per-character ciphertext of two points: huge expansion and no real message format. (2) Malleability: adding G to C₂ changes the plaintext from m to m+1 without knowing any key, since there is no authentication. (3) If r is ever reused, C₂ − C₂′ = (m − m′)·G reveals the difference of two characters. (4) A weak random generator for r would be fatal. Real systems use ECIES/ECDH with a key-derivation function and authenticated symmetric encryption, plus 256-bit random keys.</p>
+</div>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>

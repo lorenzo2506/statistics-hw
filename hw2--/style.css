@@ -1,0 +1,144 @@
+/* ===== Colors (light theme by default) ===== */
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+
+  --bg: #fafaf7;
+  --fg: #1d1d1b;
+  --card: #fff;
+  --line: #d9d6cc;
+  --acc: #b4440f;
+  --mut: #6b6a63;
+}
+
+/* ===== Dark theme (when the device is in dark mode) ===== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17171a;
+    --fg: #ececea;
+    --card: #222226;
+    --line: #3a3a40;
+    --acc: #ff9b5e;
+    --mut: #a4a4a0;
+  }
+}
+
+/* ===== Page layout ===== */
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.55 Georgia, "Times New Roman", serif;
+}
+
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 60px;
+}
+
+h1 {
+  font-size: 1.6rem;
+  margin: 0.2em 0;
+}
+
+h2 {
+  margin-top: 2em;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.2em;
+}
+
+/* ===== Cards ===== */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 12px 0;
+}
+
+/* ===== Monospace elements ===== */
+code,
+pre,
+table,
+textarea,
+input {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+/* ===== Tables ===== */
+.scroll {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+tr.best td {
+  background: var(--acc);
+  color: #fff;
+}
+
+/* ===== Buttons and inputs ===== */
+button,
+input,
+textarea {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--fg);
+}
+
+button {
+  cursor: pointer;
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ===== Helpers ===== */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.mut {
+  color: var(--mut);
+}
+
+/* ===== Charts (SVG) ===== */
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.bar {
+  fill: var(--acc);
+}
+
+.ref {
+  fill: none;
+  stroke: var(--fg);
+  stroke-width: 1;
+}
