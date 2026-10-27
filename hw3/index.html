@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Homework 3 – Penetration scores: LLN and CLT</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Homework 3 – Penetration process: Law of Large Numbers and Central Limit Theorem</h1>
+  <p class="mut">
+    Model: an attacker tries to penetrate <b>n systems</b> one after the other; step i gives a score X<sub>i</sub>
+    (i.i.d.). We simulate <b>m attackers</b> (m independent trajectories) and study S<sub>n</sub>,
+    S<sub>n</sub>/n and S<sub>n</sub>/√n as n grows. Bernoulli: X ∈ {0,1}, P(X=1)=p.
+    Rademacher: X ∈ {−1,+1} with probability ½ each (symmetric, zero mean).
+  </p>
+
+  <h2>0. Simulation settings</h2>
+  <div class="card">
+    <div class="row">
+      <label>Model
+        <select id="model">
+          <option value="bernoulli">Bernoulli</option>
+          <option value="rademacher">Rademacher</option>
+        </select>
+      </label>
+      <label>p <input id="p" type="number" min="0.01" max="0.99" step="0.01" value="0.3" style="width:70px"></label>
+      <label>m attackers <input id="m" type="number" min="100" max="5000" value="2000" style="width:80px"></label>
+      <label>Seed <input id="seed" type="number" value="12345" style="width:90px"></label>
+    </div>
+    <div class="row">
+      <label>n values (comma separated, up to 6, max 100000)
+        <input id="ns" value="10, 100, 1000, 10000" size="26">
+      </label>
+      <label>ε (LLN) <input id="eps" type="number" min="0.001" max="1" step="0.01" value="0.1" style="width:70px"></label>
+      <label><input id="shared" type="checkbox" checked> same horizontal scale for all n</label>
+    </div>
+    <div class="row"><button id="run">Run simulation</button><span id="status" class="mut"></span></div>
+    <p class="mut">
+      The m trajectories are simulated once up to the largest n; the quantities for smaller n are read from the same
+      trajectories at step n. Same seed gives the same results.
+    </p>
+  </div>
+
+  <h2>1. Sample trajectories (8 attackers)</h2>
+  <p>
+    Left: total score S<sub>k</sub>. Middle: average S<sub>k</sub>/k. Right: normalized S<sub>k</sub>/√k.
+    Horizontal axis: k on a logarithmic scale. Dashed line: theoretical mean; grey band: mean ± 2 standard deviations.
+  </p>
+  <div class="grid" id="paths"></div>
+
+  <h2>2. Distributions across the m attackers</h2>
+  <p>
+    Each row is one quantity, each column one value of n. Bars: empirical density. Black curve: normal density
+    with the theoretical mean and variance of that quantity.
+  </p>
+  <h3>Total score S<sub>n</sub></h3>
+  <div class="grid" id="hS"></div>
+  <h3>Average score S<sub>n</sub>/n</h3>
+  <div class="grid" id="hA"></div>
+  <h3>Normalized total score S<sub>n</sub>/√n</h3>
+  <div class="grid" id="hN"></div>
+
+  <h2>3. Means and variances under the three normalizations</h2>
+  <div class="scroll"><table id="tMom"></table></div>
+  <p class="mut" id="nMom"></p>
+
+  <h2>4. Law of Large Numbers: convergence in probability of S<sub>n</sub>/n</h2>
+  <div class="scroll"><table id="tLLN"></table></div>
+  <p class="mut" id="nLLN"></p>
+
+  <h2>5. Central Limit Theorem: distribution of the standardized sum</h2>
+  <div class="scroll"><table id="tCLT"></table></div>
+  <p class="mut" id="nCLT"></p>
+
+  <h2>6. Interpretation</h2>
+  <div class="card">
+    <p><b>Total score S<sub>n</sub>.</b> Its variance is nσ², so the spread grows like √n. In the Bernoulli case the mean
+      grows linearly (np): the number of compromised systems out of n is about np give or take a few √(np(1−p)).
+      In the Rademacher case the mean stays 0 and S<sub>n</sub> is a symmetric random walk (gains and losses cancel on average) that
+      wanders over a range of order √n without drift.</p>
+    <p><b>Average score S<sub>n</sub>/n.</b> Variance σ²/n → 0: the trajectories squeeze towards the mean μ (p for
+      Bernoulli, 0 for Rademacher). This is the Law of Large Numbers: for every ε &gt; 0, P(|S<sub>n</sub>/n − μ| ≥ ε) → 0.
+      Chebyshev only gives the bound σ²/(nε²); the real probability decays much faster (Hoeffding gives an exponential bound),
+      as the table shows. The limit is degenerate (a constant), so this scaling hides the shape of the fluctuations.</p>
+    <p><b>Normalized score S<sub>n</sub>/√n.</b> Variance σ² for every n: this is the scaling at which the fluctuations neither explode
+      nor vanish. In the Rademacher case S<sub>n</sub>/√n converges in distribution to N(0,1) (CLT): the histograms approach the bell curve,
+      the Kolmogorov–Smirnov distance falls roughly like 1/√n (for lattice variables) until it reaches the sampling noise of order
+      1/√m, the skewness stays 0 and the excess kurtosis −2/n → 0. In the Bernoulli case S<sub>n</sub>/√n has mean √n·p → ∞, so it
+      does <i>not</i> converge; only the centred and standardized version (S<sub>n</sub> − np)/√(np(1−p)) converges to N(0,1),
+      with a speed that depends on p (skewness (1−2p)/√(np(1−p)): small or large p converge more slowly).</p>
+    <p><b>Systems and attackers.</b> The number of systems n controls the size and the relative reliability of the aggregate
+      score: larger n means more total penetrations but a smaller relative uncertainty (≈ 1/√n), so a defender can plan for about
+      np ± 3√(np(1−p)) compromised systems. The number of attackers m does not change the distribution of one attacker’s score;
+      it improves our <i>estimate</i> of that distribution (sampling error ≈ 1/√m, visible as the KS noise floor). If the m attackers act
+      independently, the pooled score is a sum of mn i.i.d. terms, with mean mnp and standard deviation √(mnp(1−p)), so the pooled
+      average has variance σ²/(mn).</p>
+    <p class="mut">Limits of the model: independent systems and attackers, the same p for every step, no learning or defence reaction.
+      Real penetration processes have dependence and heterogeneity, and then the classical LLN and CLT may need modification.</p>
+  </div>
+</main>
+<script src="script.js"></script>
+</body>
+</html>
