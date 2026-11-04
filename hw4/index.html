@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Homework 4 – Welford recurrences and sampling mean/variance</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Homework 4 – Welford’s recurrences; sampling mean and variance of hacker scores</h1>
+
+  <h2>Exercise 1 – Welford’s recurrence formulas</h2>
+
+  <h3>1.1 Derivation</h3>
+  <p>Notation: x<sub>1</sub>, x<sub>2</sub>, … are the data; after k data, M<sub>k</sub> is the mean, SS<sub>k</sub> = Σ<sub>i≤k</sub> (x<sub>i</sub> − M<sub>k</sub>)² the sum of squares,
+    and δ<sub>k</sub> = x<sub>k</sub> − M<sub>k−1</sub> the “surprise” of the new datum with respect to the old mean.</p>
+  <p><b>Mean (Knuth).</b> Since k·M<sub>k</sub> = (k−1)·M<sub>k−1</sub> + x<sub>k</sub>:</p>
+<pre>M_k = ((k-1) M_{k-1} + x_k) / k
+    = M_{k-1} + (x_k - M_{k-1}) / k
+    = M_{k-1} + δ_k / k                       (M_0 = 0)
+
+Useful consequence:  x_k - M_k = δ_k - δ_k/k = δ_k (k-1)/k</pre>
+  <p><b>Sum of squares.</b> Expanding the square gives SS<sub>k</sub> = Σ x<sub>i</sub>² − k·M<sub>k</sub>², hence the increment is</p>
+<pre>SS_k - SS_{k-1} = x_k² - k M_k² + (k-1) M_{k-1}²
+
+Write M = M_{k-1} and x_k = M + δ, M_k = M + δ/k:
+  x_k²    = M² + 2Mδ + δ²
+  k M_k²  = k M² + 2Mδ + δ²/k
+  (k-1)M² = (k-1) M²
+Sum:  M² + 2Mδ + δ² - kM² - 2Mδ - δ²/k + (k-1)M² = δ² - δ²/k = δ² (k-1)/k
+
+Since δ (x_k - M_k) = δ · δ (k-1)/k  we get the Welford formula:
+
+  SS_k = SS_{k-1} + (x_k - M_{k-1}) (x_k - M_k)          (SS_0 = 0)</pre>
+  <p><b>Variance.</b> The sample variance (unbiased) is s²<sub>k</sub> = SS<sub>k</sub>/(k−1) for k ≥ 2, and the “population” (biased) one is SS<sub>k</sub>/k. From the SS recurrence:</p>
+<pre>s²_k = SS_k / (k-1) = ((k-2)/(k-1)) s²_{k-1} + δ_k² / k           (k ≥ 2)
+v_k  = SS_k / k     = ((k-1)/k) v_{k-1} + ((k-1)/k²) δ_k²</pre>
+  <p>In practice one updates M and SS and divides only when the variance is needed.</p>
+
+  <h3>1.2 Code (core logic: 3 lines)</h3>
+<pre>// for each new datum x, k = number of data seen so far (including x)
+const delta = x - mean;        // δ_k = x_k - M_{k-1}
+mean += delta / k;             // M_k  = M_{k-1} + δ_k / k
+ss   += delta * (x - mean);    // SS_k = SS_{k-1} + δ_k (x_k - M_k)   (uses the NEW mean)
+// afterwards:  variance = ss / (k - 1)</pre>
+
+  <h3>1.3 Step-by-step demo</h3>
+  <div class="card">
+    <div class="row">
+      <label>Data (comma separated) <input id="data" size="36" value="4, 7, 13, 16"></label>
+      <button id="steps">Run Welford</button>
+    </div>
+    <div class="scroll"><table id="tSteps"></table></div>
+    <p class="mut" id="nSteps"></p>
+  </div>
+
+  <h3>1.4 Why Welford? Numerical stability (optional)</h3>
+  <div class="card">
+    <p>The textbook one-pass formula SS = Σx² − (Σx)²/n subtracts two huge, almost equal numbers when the data have a large mean
+      and a small spread, and loses all precision in floating point. Welford works on small differences instead.</p>
+    <div class="row">
+      <label>Add the same offset to all the data above:
+        <input id="offset" type="number" value="1000000000" style="width:150px"></label>
+      <button id="stab">Compare</button>
+    </div>
+    <div class="scroll"><table id="tStab"></table></div>
+    <p class="mut">Adding a constant to all data changes the mean but not the sum of squares, so the correct value is always the one for the data without offset.</p>
+  </div>
+
+  <h2>Exercise 2 – Sampling mean and variance of the hackers’ scores</h2>
+  <p>
+    Each of <b>m hackers</b> attempts <b>n systems</b>; each attempt gets an integer score in {0, …, 10} drawn from a fixed distribution with
+    mean μ and variance σ². For each hacker the sampling mean x̄ and the sampling variance s² of the n scores are computed with
+    Welford’s recurrences. Then the m values of x̄ and of s² are compared with μ and σ².
+  </p>
+
+  <h3>2.0 Settings</h3>
+  <div class="card">
+    <div class="row">
+      <label>Score distribution
+        <select id="dist">
+          <option value="binomial">Binomial(10, p)</option>
+          <option value="uniform">Uniform on {0,…,10}</option>
+          <option value="custom">Custom weights</option>
+        </select>
+      </label>
+      <label>p <input id="p" type="number" min="0.01" max="0.99" step="0.01" value="0.3" style="width:70px"></label>
+      <label>m hackers <input id="m" type="number" min="100" max="5000" value="2000" style="width:80px"></label>
+      <label>Seed <input id="seed" type="number" value="2024" style="width:90px"></label>
+    </div>
+    <div class="row">
+      <label>Custom weights for scores 0…10 (11 numbers)
+        <input id="weights" size="40" value="10, 14, 18, 16, 12, 9, 7, 5, 4, 3, 2">
+      </label>
+    </div>
+    <div class="row">
+      <label>n values (comma separated, up to 6, each between 2 and 10000)
+        <input id="ns" size="30" value="5, 10, 50, 100, 1000">
+      </label>
+      <label><input id="shared" type="checkbox" checked> same horizontal scale for all n</label>
+    </div>
+    <div class="row"><button id="run">Run experiment</button><span id="status" class="mut"></span></div>
+    <div id="theory" class="mut"></div>
+  </div>
+
+  <h3>2.1 Welford running estimates for 6 hackers</h3>
+  <p>Running sampling mean (left) and running sampling variance (right) as a hacker attempts more systems; dashed line: μ and σ²;
+     grey band: ± 2 standard deviations of the estimator.</p>
+  <div class="grid" id="runs"></div>
+
+  <h3>2.2 Distribution of sampling means and sampling variances over the m hackers</h3>
+  <h3>Sampling means x̄</h3>
+  <div class="grid" id="hMean"></div>
+  <h3>Sampling variances s²</h3>
+  <div class="grid" id="hVar"></div>
+  <p class="mut">Bars: empirical density. Black curve: normal density with theoretical mean and variance of the estimator (x̄: μ and σ²/n).</p>
+
+  <h3>2.3 Results</h3>
+  <div class="scroll"><table id="tRes"></table></div>
+  <p class="mut" id="nRes"></p>
+
+  <h2>Conclusions</h2>
+  <div class="card">
+    <p><b>Averages versus the theory.</b> The average of the m sampling means is very close to μ for every n, and the average of the m
+      sampling variances s² (divisor n−1) is very close to σ²: both estimators are <i>unbiased</i>, E[x̄] = μ and E[s²] = σ². If the sum of squares is divided by n
+      instead of n−1, the average is systematically lower, σ²(n−1)/n; the gap is large for small n and fades as n grows. This is Bessel’s correction:
+      the deviations are measured from x̄, which is fitted to the same data and therefore sits closer to them than μ does, so SS/n underestimates the spread.</p>
+    <p><b>Variability.</b> Each single hacker gives a noisy value. The variance of the sampling means is σ²/n, and the variance of s² is
+      μ<sub>4</sub>/n − σ⁴(n−3)/(n(n−1)) (μ<sub>4</sub> = fourth central moment), also of order 1/n. So increasing the number of systems n attempted by each hacker
+      shrinks the spread of both estimators: the standard deviation falls like 1/√n (a hundred times more systems gives a ten times smaller spread).
+      Both estimators are therefore consistent: they converge to the true parameters (law of large numbers). The histograms also show the CLT: the distribution of x̄ becomes
+      normal and, for large n, so does that of s².</p>
+    <p><b>Why this matters in inferential statistics.</b> In practice σ² and μ are unknown, and we have a single sample. Unbiasedness and consistency justify using x̄ and s² as estimates.
+      The size of the fluctuation, the standard error σ/√n (estimated by s/√n), is what builds confidence intervals and t-tests, and it tells us how many systems we must
+      test to reach a desired precision. The m-hacker experiment is a Monte Carlo way to see the <i>sampling distribution</i> of an estimator, which is a theoretical notion we can never observe directly with one dataset.
+      Welford’s recurrences are the tool to get these estimates in a single pass, one datum at a time, with good numerical stability and constant memory.</p>
+  </div>
+</main>
+<script src="script.js"></script>
+</body>
+</html>
