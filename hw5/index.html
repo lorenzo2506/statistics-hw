@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Homework 5 – Riemann vs Lebesgue integration; normal CDF</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Homework 5 – Riemann vs Lebesgue integration; numerical computation of the normal CDF</h1>
+
+  <!-- ===================== EXERCISE 1 ===================== -->
+  <h2>Exercise 1 – Riemann and Lebesgue integration</h2>
+
+  <h3>1.1 The two approaches</h3>
+  <ul>
+    <li><b>Riemann</b>: partition the <i>domain</i> [a, b] into N equal subintervals of width h, pick a tag x<sub>i</sub> in each and add
+      f(x<sub>i</sub>)·h. Here: <i>midpoint</i> tags and <i>left</i> tags.</li>
+    <li><b>Lebesgue</b>: partition the <i>range</i> into K levels y<sub>0</sub> &lt; y<sub>1</sub> &lt; … and add y<sub>j</sub>·μ(E<sub>j</sub>), where
+      E<sub>j</sub> = {x : y<sub>j</sub> ≤ f(x) &lt; y<sub>j+1</sub>} is the preimage and μ its measure (length). This is the integral of the
+      simple function s ≤ f that equals y<sub>j</sub> on E<sub>j</sub>. Two versions: <i>exact preimages</i> (μ{f ≥ t} worked out analytically for each f) and
+      <i>sampled measure</i> (f is sampled at M points, the values are sorted and μ{f ≥ t} is the fraction of samples ≥ t, like a real black-box program).
+      For the unbounded 1/√x the levels are geometric (y<sub>j</sub> = ρ<sup>j</sup>) up to 10<sup>6</sup>.</li>
+  </ul>
+
+  <h3>1.2 All the functions</h3>
+  <div class="card">
+    <div class="row">
+      <label>N = K = M <input id="n" type="number" min="10" max="200000" value="1000" style="width:100px"></label>
+      <button id="run">Recompute</button><span id="status" class="mut"></span>
+    </div>
+    <div class="scroll"><table id="tOver"></table></div>
+    <p class="mut">Absolute errors with respect to the exact value (Si(π) = 1.8519370519824… for sin x / x). For the two step functions the jump at 0.5 is exactly on a grid point
+      when N is even, so the errors are 0: try N = 1001 to see the O(1/N) error of the Riemann sums.</p>
+  </div>
+
+  <h3>1.3 Convergence and cost for one function</h3>
+  <div class="card">
+    <div class="row"><label>Function <select id="fsel"></select></label></div>
+    <div class="scroll"><table id="tConv"></table></div>
+    <p class="mut">Times are in milliseconds in your browser (they vary from run to run). The sampled Lebesgue method stops at N = 10⁵ because of the sorting cost.</p>
+  </div>
+
+  <h3>1.4 Pathological functions</h3>
+  <p><b>Dirichlet function</b> (1 on the rationals, 0 on the irrationals, on [0, 1]). In every subinterval there are both rationals and irrationals, so for <i>every</i> partition the upper Darboux sum is 1
+    and the lower one is 0: the gap never closes and the function is <b>not Riemann integrable</b> (Riemann sums give 1 or 0 depending on the tags). Note that a computer cannot even
+    evaluate it: every floating-point number is a rational. Lebesgue: the preimage of the value 1 is ℚ ∩ [0,1], which is countable; the first
+    rationals can be covered by intervals of lengths ε/2<sup>n</sup>, with total length ≤ ε for every ε, so μ(ℚ ∩ [0,1]) = 0 and the integral is 1·0 + 0·1 = <b>0</b>.</p>
+  <div class="scroll"><table id="tDir"></table></div>
+  <p><b>Thomae’s function</b> (1/q at p/q in lowest terms, 0 at irrationals). It is continuous at the irrationals and discontinuous at the rationals, and it <b>is Riemann integrable</b> with
+    integral 0: the lower sums are always 0 and the upper sums, computed exactly below (the sup on a subinterval is 1/q for the smallest denominator q of a fraction inside it), tend to 0, but slowly.
+    Lebesgue: for each level 1/k the preimage {f ≥ 1/k} is a finite set of fractions with q ≤ k (Farey sequence), so it has measure 0 and the integral is 0. Both approaches agree.</p>
+  <div class="scroll"><table id="tThomae"></table></div>
+  <div class="scroll"><table id="tFarey"></table></div>
+
+  <h3>1.5 Discussion</h3>
+  <div class="card">
+    <p><b>Same value.</b> For every Riemann-integrable function in the list the two approaches converge to the same number: a Riemann-integrable function is Lebesgue integrable with the same integral.</p>
+    <p><b>Accuracy and convergence.</b> For smooth functions the midpoint sum is by far the best (error ∝ 1/N², e.g. about 10<sup>−7</sup> for x² at N = 1000), while the Lebesgue sum with K levels has error ∝ 1/K
+      (about 5·10<sup>−4</sup>): the simple function rounds f down to a level, so the error is about the level width times the length of the domain. At a jump the Riemann sums lose accuracy (O(1/N), unless the jump is on a grid point), whereas the Lebesgue sums are
+      unaffected by <i>where</i> the jump is, since only the values taken and the measures of the preimages matter. For the unbounded 1/√x the left sum is infinite at x = 0, the midpoint sum converges slowly (error ∝ N<sup>−1/2</sup>)
+      and the Lebesgue sum with geometric levels converges like 1/K (see the table): partitioning the range handles the singularity naturally.</p>
+    <p><b>Efficiency.</b> Riemann costs N evaluations of f and no memory. The Lebesgue method with exact preimages costs only K cheap evaluations of μ{f ≥ t}, but it needs an analytic description of the preimages, which is rarely available.
+      With the measure estimated from M samples it needs M evaluations of f plus a sort, O(M log M), and in practice it reduces to a Riemann-type sum whose values are rounded to the levels: it is not more accurate, only slower.
+      The strength of the Lebesgue definition is theoretical (more functions are integrable, limits and integrals can be exchanged), not numerical.</p>
+    <p><b>Where they differ.</b> Dirichlet (Lebesgue integrable, not Riemann integrable) and the unbounded 1/√x (an improper Riemann integral, a plain Lebesgue integral). Thomae shows that a function with a dense set of
+      discontinuities can still be Riemann integrable.</p>
+  </div>
+
+  <!-- ===================== EXERCISE 2 ===================== -->
+  <h2>Exercise 2 – Numerical computation of the standard normal CDF</h2>
+  <p>Φ(x) = ∫<sub>−∞</sub><sup>x</sup> (2π)<sup>−1/2</sup> e<sup>−t²/2</sup> dt. By symmetry, Φ(−x) = 1 − Φ(x) and Φ(0) = ½, so it is enough to integrate the density on [0, |x|] (see
+  <a href="https://faculty.etsu.edu/gardnerr/4047/notes-Hogg-McKean-Craig/Hogg-McKean-Craig-3-4.pdf">the Hogg–McKean–Craig notes, section 3.4</a>).</p>
+
+  <h3>2.1 The methods</h3>
+  <ul>
+    <li><b>Numerical integration</b> of the density: composite trapezoidal rule (error ∝ h²) and Simpson’s rule (error ∝ h⁴).</li>
+    <li><b>Power series</b> (from the notes): Φ(x) = ½ + (2π)<sup>−1/2</sup> Σ (−1)<sup>k</sup> x<sup>2k+1</sup> / (2<sup>k</sup> k! (2k+1)). It is alternating, so for large |x| huge terms cancel.
+      A variant with only positive terms: Φ(x) = ½ + φ(x) Σ x<sup>2k+1</sup> / (1·3·5···(2k+1)).</li>
+    <li><b>Through erf</b>: Φ(x) = ½ (1 + erf(x/√2)). With the Abramowitz–Stegun 7.1.26 rational approximation (error &lt; 1.5·10<sup>−7</sup>), or with erf computed by its
+      series for small arguments and by a continued fraction of erfc for the tail (P(Z &gt; x) = ½ erfc(x/√2), computed directly to avoid the cancellation in 1 − Φ).</li>
+  </ul>
+
+  <h3>2.2 Comparison with trusted references from the web</h3>
+  <div class="scroll"><table id="tRef"></table></div>
+  <p class="mut">Sources: <a href="https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule">Wikipedia, 68–95–99.7 rule</a> (values of erf(n/√2) with 12 digits, used as (1 + erf)/2);
+    <a href="https://docs.rs/crate/cdflib/0.4.1">cdflib documentation</a> (Φ(1.96) and the upper tail at 5);
+    <a href="https://www.uni-ulm.de/fileadmin/website_uni_ulm/mawi.inst.110/lehre/ws08/wr/Quantile.pdf">Univ. Ulm table</a> (6 decimals only, so errors of about 5·10<sup>−7</sup> in those rows come from the table’s rounding, not from the methods).
+    The reference values have between 6 and 16 significant digits, so differences below about 10<sup>−12</sup> cannot be interpreted. For the tail value Φ(−5) the relative error is also shown.</p>
+
+  <h3>2.3 Accuracy versus number of subintervals (x = 1.96)</h3>
+  <div class="scroll"><table id="tInt"></table></div>
+
+  <h3>2.4 Series: terms needed and loss of accuracy</h3>
+  <div class="scroll"><table id="tSer"></table></div>
+  <p class="mut">The alternating series needs larger and larger terms as |x| grows (the “largest term” column), and the rounding error of order 10<sup>−16</sup> times that term appears in the result. The positive-term series does not have this problem.</p>
+
+  <h3>2.5 Efficiency</h3>
+  <div class="scroll"><table id="tTime"></table></div>
+  <p class="mut">4001 points in [−6, 6], the errors are measured against the erf series + continued fraction (validated against the web references above). Times vary with the browser and the machine.</p>
+
+  <h3>2.6 Try your own value</h3>
+  <div class="card">
+    <div class="row"><label>x <input id="xin" type="number" step="any" value="1.5" style="width:90px"></label><button id="xgo">Compute</button></div>
+    <div class="scroll"><table id="tCalc"></table></div>
+  </div>
+
+  <h3>2.7 Why no elementary formula? Liouville’s theorem</h3>
+  <div class="card">
+    <p><b>Statement used.</b> “Elementary” functions are those built with finitely many rational operations, exp, log and algebraic functions. Liouville (1830s; in modern form Rosenlicht 1972, the reference quoted in the notes) showed:
+      if f and g are rational functions and ∫ f·e<sup>g</sup> dx is elementary, then it equals h·e<sup>g</sup> for some <i>rational</i> function h, that is, h′ + g′h = f.</p>
+    <p><b>Application.</b> For e<sup>−t²/2</sup> take f = 1 and g = −t²/2, so we would need a rational h with <b>h′ − t·h = 1</b>. If h had a pole of order n at some point, h′ would have a pole of order n+1 and t·h one of order n,
+      which cannot cancel: so h is a polynomial. But if h is a polynomial of degree d ≥ 0, t·h has degree d+1 ≥ 1 while h′ has degree d−1, so h′ − t·h has degree d+1 ≥ 1 and cannot be the constant 1 (and h = 0 gives 0 ≠ 1).
+      Hence there is no elementary antiderivative. The same argument works for e<sup>−t²</sup>. The antiderivative exists (the integral of a continuous function) and has the power series above, but it is not an elementary function.</p>
+    <p><b>The error function.</b> One simply gives the new function a name: erf(z) = (2/√π) ∫<sub>0</sub><sup>z</sup> e<sup>−t²</sup> dt, a <i>special function</i>. Then Φ(x) = ½(1 + erf(x/√2)) is an exact analytic representation, and 2Φ(1) − 1 = erf(1/√2) (68–95–99.7 rule).
+      But this is only a change of name: erf is still defined by an integral or a series, so to get a number for a given x we need numerical methods anyway: series for small arguments, continued fractions or asymptotic expansions for the tails,
+      and rational minimax approximations (Cody, Abramowitz–Stegun) like those used in numerical libraries. In practice one chooses by range of x and by the accuracy needed, and the tail is computed with erfc directly to avoid cancellation (the table shows that 1 − Φ would lose all its relative accuracy at x = 5).</p>
+  </div>
+</main>
+<script src="script.js"></script>
+</body>
+</html>
