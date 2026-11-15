@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Homework 6 – Statistical independence: χ² test</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Homework 6 – Statistical independence: contingency table and χ² test</h1>
+
+  <h2>1. Theory</h2>
+  <div class="card">
+    <p><b>Probability.</b> Two events A and B are independent if P(A ∩ B) = P(A)·P(B), equivalently P(A | B) = P(A) when P(B) &gt; 0: knowing B does not change the probability of A.
+      For two discrete variables X and F independence means P(X = i, F = j) = P(X = i)·P(F = j) for <i>every</i> pair of categories (i, j), that is, the conditional distribution of F
+      is the same for every value of X (and the other way round).</p>
+    <p><b>From data.</b> For a sample of N pairs (X, F) arranged in an r × c contingency table with counts n<sub>ij</sub>: row totals n<sub>i·</sub>, column totals n<sub>·j</sub>,
+      marginal frequencies f<sub>i·</sub> = n<sub>i·</sub>/N and f<sub>·j</sub> = n<sub>·j</sub>/N, conditional frequencies f(F=j | X=i) = n<sub>ij</sub>/n<sub>i·</sub> and f(X=i | F=j) = n<sub>ij</sub>/n<sub>·j</sub>.
+      If X and F were independent, every conditional row would be close to the marginal one, and the counts would be close to the <b>expected counts</b>
+      E<sub>ij</sub> = n<sub>i·</sub>·n<sub>·j</sub>/N (N times the product of the marginals).</p>
+    <p><b>χ² test of independence.</b> H<sub>0</sub>: X and F are independent. Statistic χ² = Σ<sub>ij</sub> (O<sub>ij</sub> − E<sub>ij</sub>)²/E<sub>ij</sub>. Under H<sub>0</sub> and for large samples it is approximately χ² distributed with
+      (r−1)(c−1) degrees of freedom (the r + c − 1 free marginals are estimated from the data). The p-value is P(χ²<sub>df</sub> ≥ observed value): the probability, if H<sub>0</sub> holds, of a discrepancy at least this large.
+      Reject H<sub>0</sub> if p &lt; α (typically 0.05). Conditions: independent observations, and expected counts mostly ≥ 5 (Cochran’s rule).
+      Extra tools used below: standardized residuals (O − E)/√E, Cramér’s V = √(χ²/(N·min(r−1, c−1))) as a measure of strength (0 to 1), and a permutation p-value obtained by reshuffling F many times, which does not rely on the χ² approximation.</p>
+  </div>
+
+  <h2>2. Data</h2>
+  <div class="card">
+    <p class="mut">One observation per line, “X,F” (comma, semicolon or tab). The built-in examples are <i>simulated</i> data, not real measurements. You can paste your own bivariate dataset.</p>
+    <div class="row">
+      <label>Example
+        <select id="ex">
+          <option value="dependent">Security training vs phishing click (dependent by construction)</option>
+          <option value="independent">Operating system vs alert level (independent by construction)</option>
+          <option value="small">Teams vs alert level (small sample, 30 rows)</option>
+        </select>
+      </label>
+      <label><input id="header" type="checkbox"> first line is a header</label>
+      <label>α <input id="alpha" type="number" min="0.0001" max="0.5" step="0.01" value="0.05" style="width:80px"></label>
+      <button id="go">Analyse</button><span id="status" class="mut"></span>
+    </div>
+    <textarea id="data" rows="6" spellcheck="false"></textarea>
+  </div>
+
+  <div id="out" hidden>
+    <h2>3. Contingency table and frequencies</h2>
+    <h3>Observed counts with marginals</h3>
+    <div class="scroll"><table id="tObs"></table></div>
+    <h3>Joint relative frequencies n<sub>ij</sub>/N</h3>
+    <div class="scroll"><table id="tJoint"></table></div>
+    <h3>Conditional frequencies of F given X (rows) with the marginal distribution of F</h3>
+    <div class="scroll"><table id="tRow"></table></div>
+    <div id="bars"></div>
+    <p class="mut">If X and F were independent, every row would equal the marginal row (“all”).</p>
+    <h3>Conditional frequencies of X given F (columns)</h3>
+    <div class="scroll"><table id="tCol"></table></div>
+
+    <h2>4. Expected frequencies under independence and χ²</h2>
+    <h3>Expected counts E<sub>ij</sub> = n<sub>i·</sub>n<sub>·j</sub>/N</h3>
+    <div class="scroll"><table id="tExp"></table></div>
+    <h3>Contribution (O − E)²/E to χ² (standardized residual (O − E)/√E)</h3>
+    <div class="scroll"><table id="tChi"></table></div>
+    <div class="card" id="stats"></div>
+
+    <h2>5. Interpretation</h2>
+    <div class="card" id="verdict"></div>
+  </div>
+
+  <h2>6. Association is not causality</h2>
+  <div class="card">
+    <p>A significant χ² means that X and F are <b>statistically associated</b> (dependent): the distribution of F differs across the values of X. It says nothing about <i>why</i>.
+      The test is symmetric in X and F, so it cannot tell which variable acts on which. Possible explanations of an association: X influences F; F influences X (reverse causation);
+      a third variable Z (a <i>confounder</i>) influences both; or chance (about α of true-independence datasets are flagged). Aggregating over a hidden variable can even reverse the direction of an association (Simpson’s paradox).
+      Establishing causality needs more than a contingency table: randomized experiments (the investigator assigns X at random, which breaks the link with confounders), or careful causal designs and background knowledge.</p>
+    <p>Other points to keep in mind: a very large N makes even tiny, irrelevant departures from independence “significant”, so report an effect size (Cramér’s V) and not only the p-value; with small samples the test may fail to detect a real association,
+      so a large p-value does not prove independence; and a p-value is not the probability that H<sub>0</sub> is true. In the “training vs phishing” example, the association would be compatible with training really reducing clicks, but also with, say,
+      more careful employees being more likely to attend training: only an experiment that assigns the training at random could separate the two explanations.</p>
+  </div>
+</main>
+<script src="script.js"></script>
+</body>
+</html>
